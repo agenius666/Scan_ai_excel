@@ -1,0 +1,40 @@
+name: xlsxscanai
+description: XLSX扫描+AI校验Flutter工具
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 核心依赖（按功能分类）
+  # 1. XLSX解析/写入
+  excel: ^4.0.0
+  # 2. 文件选择/本地存储
+  file_picker: ^8.0.0
+  path_provider: ^2.1.0
+  path: ^1.8.3
+  # 3. 相机/图片处理（扫描功能）
+  camera: ^0.10.5+5
+  image_cropper: ^5.0.0
+  image: ^4.0.17
+  # 4. PDF生成
+  pdf: ^3.10.0
+  printing: ^5.12.0 # 可选，用于PDF预览/打印
+  # 5. 网络请求（调用AI接口）
+  dio: ^5.4.0
+  # 6. 权限申请（相机/文件）
+  permission_handler: ^11.0.0
+  # 7. 本地存储（保存API Key等）
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
