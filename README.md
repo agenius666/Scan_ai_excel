@@ -1,5 +1,7 @@
 # scan_ai_excel_app
 
+更新时间：2026-03-24 15:31:56
+
 一个纯前端 Flutter MVP：
 
 - 导入 `.xlsx`
