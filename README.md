@@ -20,9 +20,8 @@
 
 1. 用这里的 `pubspec.yaml` 覆盖你的工程 `pubspec.yaml`
 2. 用这里的 `lib/` 覆盖你的工程 `lib/`
-3. 根据 `platform_setup/` 中的说明修改 iOS/Android 原生配置
-4. 执行 `flutter pub get`
-5. 运行项目
+3. 执行 `flutter pub get`
+4. 运行项目
 
 ## 本地创建工程
 
@@ -35,14 +34,8 @@ cd scan_ai_excel_app
 
 - `pubspec.yaml`
 - `lib/`
-- `platform_setup/`（仅作参考，不会直接参与编译）
 
 ## Android 配置
-
-请参考：
-
-- `platform_setup/android/AndroidManifest.xml.snippet`
-- `platform_setup/android/build.gradle.kts.notes.txt`
 
 你至少需要确认：
 
@@ -50,11 +43,6 @@ cd scan_ai_excel_app
 - `minSdk >= 21`
 
 ## iOS 配置
-
-请参考：
-
-- `platform_setup/ios/Info.plist.snippet.xml`
-- `platform_setup/ios/Podfile.notes.txt`
 
 你至少需要确认：
 
