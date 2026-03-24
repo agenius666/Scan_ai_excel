@@ -1,0 +1,9 @@
+请确认 android/app/build.gradle.kts 或旧版 build.gradle 中的 minSdk 至少为 21。
+
+示例（KTS）：
+
+android {
+    defaultConfig {
+        minSdk = 21
+    }
+}
