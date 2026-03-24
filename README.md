@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 # scan_ai_excel_app
-
-更新时间：2026-03-24 15:31:56
 
 一个纯前端 Flutter MVP：
 
@@ -12,29 +9,6 @@
 - 直连用户自配的云端多模态模型（OpenAI Compatible Chat Completions 协议）
 - 将 AI 核验结果写回 Excel 最后一列
 - 导出新的 `.xlsx`
-
-## 重要说明
-
-这个目录包含的是**完整业务代码**，但它不是 `flutter create` 生成的整套工程壳子。
-
-也就是说，你需要先在本地创建一个 Flutter 工程，然后：
-
-1. 用这里的 `pubspec.yaml` 覆盖你的工程 `pubspec.yaml`
-2. 用这里的 `lib/` 覆盖你的工程 `lib/`
-3. 执行 `flutter pub get`
-4. 运行项目
-
-## 本地创建工程
-
-```bash
-flutter create scan_ai_excel_app
-cd scan_ai_excel_app
-```
-
-然后把本目录中的以下内容复制进去：
-
-- `pubspec.yaml`
-- `lib/`
 
 ## Android 配置
 
@@ -129,7 +103,3 @@ platform_setup/
 | A002 | 李四公司 | 5200 | 2026-03-24 |
 
 导入后点击某条任务，扫描纸质文件，再在“我的”里配置可用模型，完成核验与导出。
-=======
-# scan_ai_excel
-Pure frontend Flutter tool with full workflow features: Excel import &amp; parsing, document scanning, local PDF generation, multimodal AI verification, Excel write-back &amp; export.纯前端 Flutter 实现，覆盖 Excel 导入解析、文档扫描、本地 PDF 生成、多模态 AI 核验、Excel 回写导出全流程功能。
->>>>>>> 11932a92299c31419d953dd154e3df072d0703cf
