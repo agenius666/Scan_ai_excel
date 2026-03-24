@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../models/ai_check_result.dart';
 import '../models/ai_config.dart';
@@ -114,7 +114,7 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  Future<ScanTask?> scanTask(ScanTask task) async {
+  Future<ScanTask?> scanTask(BuildContext context, ScanTask task) async {
     _replaceTask(
       task.copyWith(
         status: TaskStatus.scanning,
@@ -127,6 +127,7 @@ class AppController extends ChangeNotifier {
 
     try {
       final imagePaths = await _scannerService.scanToPermanentImages(
+        context: context,
         fileNameStem: task.pdfFileNameStem,
       );
       if (imagePaths.isEmpty) {

@@ -141,7 +141,7 @@ class ScanReviewPage extends StatelessWidget {
 
   Future<void> _rescan(BuildContext context, ScanTask task) async {
     try {
-      await controller.scanTask(task);
+      await controller.scanTask(context, task);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

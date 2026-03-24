@@ -146,7 +146,7 @@ class HomePage extends StatelessWidget {
 
   Future<void> _handleScan(BuildContext context, ScanTask task) async {
     try {
-      final scannedTask = await controller.scanTask(task);
+      final scannedTask = await controller.scanTask(context, task);
       if (!context.mounted || scannedTask == null) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
