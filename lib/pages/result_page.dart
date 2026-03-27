@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../controllers/app_controller.dart';
 import '../models/ai_check_result.dart';
 import '../models/scan_task.dart';
-import 'pdf_preview_page.dart';
 
 class ResultPage extends StatelessWidget {
   const ResultPage({
@@ -29,7 +28,7 @@ class ResultPage extends StatelessWidget {
 
         final result = task.aiResult;
         return Scaffold(
-          appBar: AppBar(title: Text('核验结果 - ${task.taskName}')),
+          appBar: AppBar(title: Text('任务详情 - ${task.taskName}')),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -76,31 +75,10 @@ class ResultPage extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  FilledButton.icon(
-                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                    icon: const Icon(Icons.home_outlined),
-                    label: const Text('返回首页'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: task.pdfPath == null
-                        ? null
-                        : () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => PdfPreviewPage(
-                                  controller: controller,
-                                  pdfPath: task.pdfPath!,
-                                  title: task.taskName,
-                                ),
-                              ),
-                            ),
-                    icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: const Text('查看 PDF'),
-                  ),
-                ],
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('返回'),
               ),
             ],
           ),
@@ -156,7 +134,7 @@ class _HeaderCard extends StatelessWidget {
             Text('状态：${task.status.label}'),
             Text('PDF：${task.pdfPath ?? '尚未生成'}'),
             const SizedBox(height: 8),
-            Text(result?.summary ?? '暂无模型结果'),
+            Text(result?.summary ?? task.errorMessage ?? '暂无模型结果'),
           ],
         ),
       ),

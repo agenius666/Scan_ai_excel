@@ -6,13 +6,15 @@ class TaskTile extends StatelessWidget {
   const TaskTile({
     super.key,
     required this.task,
-    required this.onScan,
+    required this.onView,
+    required this.onRescan,
     required this.onOpenPdf,
     required this.onOpenResult,
   });
 
   final ScanTask task;
-  final VoidCallback onScan;
+  final VoidCallback onView;
+  final VoidCallback onRescan;
   final VoidCallback onOpenPdf;
   final VoidCallback onOpenResult;
 
@@ -20,9 +22,10 @@ class TaskTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final statusColor = switch (task.status) {
-      TaskStatus.pending => colorScheme.outline,
+      TaskStatus.pending => Colors.blue,
       TaskStatus.scanning => colorScheme.primary,
       TaskStatus.scanned => colorScheme.secondary,
+      TaskStatus.queued => Colors.orange,
       TaskStatus.checking => colorScheme.tertiary,
       TaskStatus.done => Colors.green,
       TaskStatus.failed => colorScheme.error,
@@ -32,6 +35,8 @@ class TaskTile extends StatelessWidget {
     for (final entry in task.rowData.entries.take(3)) {
       subtitle.add('${entry.key}: ${entry.value}');
     }
+
+    final hasScans = task.imagePaths.isNotEmpty;
 
     return Card(
       child: Padding(
@@ -59,6 +64,11 @@ class TaskTile extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(subtitle.join('   |   ')),
               ),
+            if (task.aiResult != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('结果：${task.aiResult!.summary}'),
+              ),
             if (task.errorMessage?.isNotEmpty == true)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -73,17 +83,27 @@ class TaskTile extends StatelessWidget {
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed: onScan,
+                  onPressed: task.isInFlight ? null : onRescan,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
                   icon: const Icon(Icons.document_scanner_outlined),
-                  label: Text(task.imagePaths.isEmpty ? '开始扫描' : '重新扫描'),
+                  label: Text(hasScans ? '重扫' : '扫描'),
                 ),
+                if (hasScans)
+                  OutlinedButton.icon(
+                    onPressed: onView,
+                    icon: const Icon(Icons.visibility_outlined),
+                    label: const Text('查看'),
+                  ),
                 OutlinedButton.icon(
                   onPressed: task.pdfPath == null ? null : onOpenPdf,
                   icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: const Text('查看PDF'),
+                  label: const Text('查看 PDF'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: task.aiResult == null ? null : onOpenResult,
+                  onPressed: task.aiResult != null || task.errorMessage != null ? onOpenResult : null,
                   icon: const Icon(Icons.fact_check_outlined),
                   label: const Text('查看结果'),
                 ),

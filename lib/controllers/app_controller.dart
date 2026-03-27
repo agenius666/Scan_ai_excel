@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import '../models/ai_check_result.dart';
 import '../models/ai_config.dart';
 import '../models/excel_rule.dart';
+import '../models/history_record.dart';
 import '../models/scan_task.dart';
 import '../models/workbook_session.dart';
 import '../services/ai_service.dart';
 import '../services/excel_service.dart';
+import '../services/history_service.dart';
 import '../services/pdf_service.dart';
 import '../services/scanner_service.dart';
 import '../services/settings_service.dart';
+import '../services/task_queue_service.dart';
 
 class AppController extends ChangeNotifier {
   AppController({
@@ -18,17 +21,23 @@ class AppController extends ChangeNotifier {
     required ScannerService scannerService,
     required PdfService pdfService,
     required AiService aiService,
+    required HistoryService historyService,
+    required TaskQueueService taskQueueService,
   })  : _settingsService = settingsService,
         _excelService = excelService,
         _scannerService = scannerService,
         _pdfService = pdfService,
-        _aiService = aiService;
+        _aiService = aiService,
+        _historyService = historyService,
+        _taskQueueService = taskQueueService;
 
   final SettingsService _settingsService;
   final ExcelService _excelService;
   final ScannerService _scannerService;
   final PdfService _pdfService;
   final AiService _aiService;
+  final HistoryService _historyService;
+  final TaskQueueService _taskQueueService;
 
   AiConfig _aiConfig = AiConfig.defaults;
   ExcelRule _excelRule = ExcelRule.defaults;
@@ -37,6 +46,7 @@ class AppController extends ChangeNotifier {
   bool _busy = false;
   String? _currentMessage;
   String? _lastExportPath;
+  List<HistoryRecord> _history = const [];
 
   AiConfig get aiConfig => _aiConfig;
   ExcelRule get excelRule => _excelRule;
@@ -46,12 +56,18 @@ class AppController extends ChangeNotifier {
   String? get currentMessage => _currentMessage;
   String? get lastExportPath => _lastExportPath;
   String? get currentExcelName => _session?.sourceFileName;
+  List<HistoryRecord> get history => _history;
+  bool get queueRunning => _taskQueueService.running;
 
   int get totalCount => _tasks.length;
   int get pendingCount =>
       _tasks.where((task) => task.status == TaskStatus.pending).length;
   int get scannedCount =>
       _tasks.where((task) => task.status == TaskStatus.scanned).length;
+  int get queuedCount =>
+      _tasks.where((task) => task.status == TaskStatus.queued).length;
+  int get checkingCount =>
+      _tasks.where((task) => task.status == TaskStatus.checking).length;
   int get doneCount =>
       _tasks.where((task) => task.status == TaskStatus.done).length;
   int get failedCount =>
@@ -60,6 +76,7 @@ class AppController extends ChangeNotifier {
   Future<void> initialize() async {
     _aiConfig = await _settingsService.loadAiConfig();
     _excelRule = await _settingsService.loadExcelRule();
+    _history = await _historyService.load();
     notifyListeners();
   }
 
@@ -114,6 +131,14 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  ScanTask? nextTaskAfter(int rowIndex) {
+    final sorted = [..._tasks]..sort((a, b) => a.rowIndex.compareTo(b.rowIndex));
+    for (final task in sorted) {
+      if (task.rowIndex > rowIndex) return task;
+    }
+    return null;
+  }
+
   Future<ScanTask?> scanTask(BuildContext context, ScanTask task) async {
     _replaceTask(
       task.copyWith(
@@ -144,6 +169,7 @@ class AppController extends ChangeNotifier {
 
       final updated = task.copyWith(
         status: TaskStatus.scanned,
+        createdAt: DateTime.now(),
         imagePaths: imagePaths,
         clearPdfPath: true,
         clearAiResult: true,
@@ -163,7 +189,30 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  Future<ScanTask> processScannedTask(ScanTask task) async {
+  Future<void> enqueueTaskForChecking(ScanTask task) async {
+    final activeSession = _session;
+    if (activeSession == null) {
+      throw Exception('请先导入 Excel。');
+    }
+    if (task.imagePaths.isEmpty) {
+      throw Exception('当前任务没有扫描图片，请先扫描。');
+    }
+
+    final queuedTask = task.copyWith(
+      status: TaskStatus.queued,
+      clearError: true,
+      clearAiResult: true,
+    );
+    _replaceTask(queuedTask);
+    _currentMessage = '核验队列：$queuedCount 排队，$checkingCount 进行中，$doneCount 已完成';
+    notifyListeners();
+
+    if (!_taskQueueService.running) {
+      Future.microtask(() => _taskQueueService.processPending(this));
+    }
+  }
+
+  Future<ScanTask> processQueuedTask(ScanTask task) async {
     final activeSession = _session;
     if (activeSession == null) {
       throw Exception('请先导入 Excel。');
@@ -177,13 +226,10 @@ class AppController extends ChangeNotifier {
       clearError: true,
     );
     _replaceTask(checkingTask);
+    _currentMessage = '正在核验：${task.taskName}';
+    notifyListeners();
 
     try {
-      final pdfPath = await _pdfService.generatePdf(
-        imagePaths: task.imagePaths,
-        fileNameStem: task.pdfFileNameStem,
-      );
-
       final aiResult = await _aiService.checkDocument(
         config: _aiConfig,
         rule: _excelRule,
@@ -198,13 +244,26 @@ class AppController extends ChangeNotifier {
         value: aiResult.toExcelCellText(),
       );
 
-      final doneTask = task.copyWith(
+      final latestTask = taskByRowIndex(task.rowIndex) ?? task;
+      final doneTask = latestTask.copyWith(
         status: TaskStatus.done,
-        pdfPath: pdfPath,
         aiResult: aiResult,
         clearError: true,
       );
       _replaceTask(doneTask);
+      final record = HistoryRecord(
+        id: '${task.rowIndex}-${DateTime.now().millisecondsSinceEpoch}',
+        taskName: task.taskName,
+        pdfPath: doneTask.pdfPath ?? '',
+        excelPath: _lastExportPath ?? '',
+        createdAt: DateTime.now().toIso8601String(),
+        status: doneTask.status.label,
+        summary: aiResult.summary,
+      );
+      await _historyService.append(record);
+      _history = await _historyService.load();
+      _currentMessage = '核验队列：$queuedCount 排队，$checkingCount 进行中，$doneCount 已完成';
+      notifyListeners();
       return doneTask;
     } catch (e) {
       final failedTask = task.copyWith(
@@ -212,12 +271,36 @@ class AppController extends ChangeNotifier {
         errorMessage: e.toString(),
       );
       _replaceTask(failedTask);
+      _currentMessage = '任务失败：${task.taskName}';
+      notifyListeners();
       rethrow;
     }
   }
 
+  Future<String> generatePdfForTask(ScanTask task) async {
+    if (task.imagePaths.isEmpty) {
+      throw Exception('当前任务没有扫描图片，请先扫描。');
+    }
+    final path = await _pdfService.generatePdf(
+      imagePaths: task.imagePaths,
+      fileNameStem: task.pdfFileNameStem,
+    );
+    final latestTask = taskByRowIndex(task.rowIndex) ?? task;
+    _replaceTask(latestTask.copyWith(pdfPath: path, clearError: true));
+    return path;
+  }
+
   Future<List<int>> loadPdfBytes(String pdfPath) {
     return _pdfService.loadPdfBytes(pdfPath);
+  }
+
+  Future<String> savePdfToDownloads(String pdfPath) {
+    return _pdfService.saveCopyToDownloads(pdfPath);
+  }
+
+  Future<void> processQueue() async {
+    await _taskQueueService.processPending(this);
+    notifyListeners();
   }
 
   Future<void> writeManualResult({
@@ -240,6 +323,11 @@ class AppController extends ChangeNotifier {
       clearError: true,
     );
     _replaceTask(updated);
+  }
+
+  void notifyQueueStateChanged() {
+    _currentMessage = '核验队列：$queuedCount 排队，$checkingCount 进行中，$doneCount 已完成';
+    notifyListeners();
   }
 
   void _replaceTask(ScanTask updated) {

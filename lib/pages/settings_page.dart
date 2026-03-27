@@ -114,7 +114,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '这里默认按 OpenAI-compatible Chat Completions 接口发送图片。',
+                      '支持两类接口：OpenAI-compatible /chat/completions，以及 Anthropic /messages。会根据你填写的 endpoint 自动匹配请求格式。',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -188,6 +188,12 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: _handleSave,
               icon: const Icon(Icons.save_outlined),
               label: const Text('保存设置'),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              '作者：李文博\n官方网站：t.lwb.net.cn',
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
             ),
           ],
         ),

@@ -10,16 +10,15 @@ class ScannerService {
   }) async {
     final result = await Navigator.of(context).push<List<String>>(
       MaterialPageRoute(
-        builder: (_) => ManualScanPage(fileNameStem: fileNameStem),
+        builder: (_) => ManualScanPage(
+          fileNameStem: fileNameStem,
+          maxPages: maxPages,
+        ),
       ),
     );
 
     if (result == null || result.isEmpty) {
       return const [];
-    }
-
-    if (result.length > maxPages) {
-      return result.take(maxPages).toList();
     }
 
     return result;

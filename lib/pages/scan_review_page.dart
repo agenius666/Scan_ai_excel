@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../controllers/app_controller.dart';
 import '../models/scan_task.dart';
 import 'pdf_preview_page.dart';
-import 'result_page.dart';
 
 class ScanReviewPage extends StatelessWidget {
   const ScanReviewPage({
@@ -40,21 +39,22 @@ class ScanReviewPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '任务信息',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
+                      Text('任务信息', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Text('文件名：${task.pdfFileNameStem}.pdf'),
                       const SizedBox(height: 4),
                       Text('页数：${task.imagePaths.length}'),
+                      const SizedBox(height: 4),
+                      Text('状态：${task.status.label}'),
+                      if (task.aiResult != null) ...[
+                        const SizedBox(height: 8),
+                        Text('结果摘要：${task.aiResult!.summary}'),
+                      ],
                       if (task.errorMessage?.isNotEmpty == true) ...[
                         const SizedBox(height: 8),
                         Text(
                           task.errorMessage!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
+                          style: TextStyle(color: Theme.of(context).colorScheme.error),
                         ),
                       ],
                     ],
@@ -62,10 +62,7 @@ class ScanReviewPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                '扫描图片预览',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('扫描图片预览', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               if (task.imagePaths.isEmpty)
                 const Card(
@@ -75,45 +72,60 @@ class ScanReviewPage extends StatelessWidget {
                   ),
                 )
               else
-                ...task.imagePaths.asMap().entries.map(
-                      (entry) => Card(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: task.imagePaths.asMap().entries.map((entry) {
+                    return GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => _ImagePreviewPage(
+                            imagePaths: task.imagePaths,
+                            initialIndex: entry.key,
+                          ),
+                        ),
+                      ),
+                      child: Container(
+                        width: 110,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                        ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Text('第 ${entry.key + 1} 页'),
-                            ),
                             ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                bottomLeft: Radius.circular(12),
-                                bottomRight: Radius.circular(12),
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                              child: AspectRatio(
+                                aspectRatio: 3 / 4,
+                                child: Image.file(File(entry.value), fit: BoxFit.cover),
                               ),
-                              child: Image.file(
-                                File(entry.value),
-                                fit: BoxFit.cover,
-                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text('第 ${entry.key + 1} 页'),
                             ),
                           ],
                         ),
                       ),
-                    ),
+                    );
+                  }).toList(),
+                ),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
                 children: [
                   FilledButton.icon(
-                    onPressed: controller.busy ? null : () => _rescan(context, task),
-                    icon: const Icon(Icons.document_scanner_outlined),
-                    label: const Text('重新扫描'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: controller.busy || task.imagePaths.isEmpty
+                    onPressed: controller.busy || !task.canStartChecking || task.isInFlight
                         ? null
-                        : () => _runAi(context, task),
+                        : () => _enqueue(context, task),
                     icon: const Icon(Icons.smart_toy_outlined),
-                    label: const Text('生成 PDF 并开始核验'),
+                    label: Text(task.isInFlight ? '核验中' : '开始核验'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: controller.busy || task.isInFlight ? null : () => _rescan(context, task),
+                    icon: const Icon(Icons.document_scanner_outlined),
+                    label: Text(task.status == TaskStatus.pending ? '扫描' : '重新扫描'),
                   ),
                   OutlinedButton.icon(
                     onPressed: task.pdfPath == null
@@ -128,7 +140,14 @@ class ScanReviewPage extends StatelessWidget {
                               ),
                             ),
                     icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: const Text('查看已生成 PDF'),
+                    label: const Text('查看 PDF'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: task.imagePaths.isEmpty || task.isInFlight
+                        ? null
+                        : () => _generatePdf(context, task),
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: Text(task.pdfPath == null ? '生成 PDF' : '重新生成 PDF'),
                   ),
                 ],
               ),
@@ -144,29 +163,89 @@ class ScanReviewPage extends StatelessWidget {
       await controller.scanTask(context, task);
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
-  Future<void> _runAi(BuildContext context, ScanTask task) async {
+  Future<void> _enqueue(BuildContext context, ScanTask task) async {
     try {
-      final doneTask = await controller.processScannedTask(task);
+      await controller.enqueueTaskForChecking(task);
       if (!context.mounted) return;
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => ResultPage(
-            controller: controller,
-            taskRowIndex: doneTask.rowIndex,
+      final nextTask = controller.nextTaskAfter(task.rowIndex);
+      if (nextTask != null) {
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => ScanReviewPage(controller: controller, taskRowIndex: nextTask.rowIndex),
           ),
-        ),
-      );
+        );
+      } else {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
+
+  Future<void> _generatePdf(BuildContext context, ScanTask task) async {
+    try {
+      final path = await controller.generatePdfForTask(task);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF 已生成：$path')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+}
+
+class _ImagePreviewPage extends StatefulWidget {
+  const _ImagePreviewPage({required this.imagePaths, required this.initialIndex});
+
+  final List<String> imagePaths;
+  final int initialIndex;
+
+  @override
+  State<_ImagePreviewPage> createState() => _ImagePreviewPageState();
+}
+
+class _ImagePreviewPageState extends State<_ImagePreviewPage> {
+  late final PageController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: PageView.builder(
+          controller: _controller,
+          itemCount: widget.imagePaths.length,
+          itemBuilder: (context, index) {
+            return InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4,
+              child: Center(
+                child: Image.file(File(widget.imagePaths[index]), fit: BoxFit.contain),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 }

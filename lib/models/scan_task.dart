@@ -4,6 +4,7 @@ enum TaskStatus {
   pending,
   scanning,
   scanned,
+  queued,
   checking,
   done,
   failed,
@@ -18,6 +19,8 @@ extension TaskStatusX on TaskStatus {
         return '扫描中';
       case TaskStatus.scanned:
         return '已扫描';
+      case TaskStatus.queued:
+        return '排队中';
       case TaskStatus.checking:
         return '核验中';
       case TaskStatus.done:
@@ -39,6 +42,7 @@ class ScanTask {
     this.pdfPath,
     this.aiResult,
     this.errorMessage,
+    this.createdAt,
   });
 
   final int rowIndex;
@@ -50,6 +54,14 @@ class ScanTask {
   final String? pdfPath;
   final AiCheckResult? aiResult;
   final String? errorMessage;
+  final DateTime? createdAt;
+
+  bool get canStartChecking =>
+      imagePaths.isNotEmpty &&
+      (status == TaskStatus.scanned || status == TaskStatus.failed);
+
+  bool get isInFlight =>
+      status == TaskStatus.queued || status == TaskStatus.checking;
 
   ScanTask copyWith({
     TaskStatus? status,
@@ -60,6 +72,7 @@ class ScanTask {
     bool clearPdfPath = false,
     bool clearAiResult = false,
     bool clearError = false,
+    DateTime? createdAt,
   }) {
     return ScanTask(
       rowIndex: rowIndex,
@@ -71,6 +84,7 @@ class ScanTask {
       pdfPath: clearPdfPath ? null : (pdfPath ?? this.pdfPath),
       aiResult: clearAiResult ? null : (aiResult ?? this.aiResult),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

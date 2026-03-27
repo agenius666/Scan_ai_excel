@@ -1,6 +1,6 @@
 {
-    "name": "scan_ai_excel_app",
-    "short_name": "scan_ai_excel_app",
+    "name": "ScanExcel",
+    "short_name": "ScanExcel",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

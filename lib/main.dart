@@ -5,9 +5,11 @@ import 'pages/home_page.dart';
 import 'pages/settings_page.dart';
 import 'services/ai_service.dart';
 import 'services/excel_service.dart';
+import 'services/history_service.dart';
 import 'services/pdf_service.dart';
 import 'services/scanner_service.dart';
 import 'services/settings_service.dart';
+import 'services/task_queue_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +20,8 @@ void main() {
     scannerService: ScannerService(),
     pdfService: PdfService(),
     aiService: AiService(),
+    historyService: HistoryService(),
+    taskQueueService: TaskQueueService(),
   );
 
   runApp(ScanAiExcelApp(controller: controller));
@@ -45,7 +49,7 @@ class _ScanAiExcelAppState extends State<ScanAiExcelApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '扫描 + AI核验',
+      title: 'ScanExcel',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),

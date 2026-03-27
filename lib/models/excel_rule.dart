@@ -23,7 +23,7 @@ class ExcelRule {
     taskNameColumn: '单号',
     pdfNameColumn: '单号',
     checkColumns: ['客户名称', '金额', '日期'],
-    resultColumnName: 'AI核验结果',
+    resultColumnName: '核验结果',
     promptTemplate: '''
 你是文档核验助手。请根据扫描图片核验 Excel 字段与文档内容是否一致。
 
