@@ -17,8 +17,13 @@ class SummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '当前规则',
+              '当前会话规则',
               style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '当前导入文件正在使用这份规则进行解析和写回。',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
             LabelValue(label: 'Sheet', value: controller.excelRule.sheetName),

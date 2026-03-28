@@ -62,7 +62,11 @@ class TaskTile extends StatelessWidget {
             if (subtitle.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(subtitle.join('   |   ')),
+                child: Text(
+                  subtitle.join('   |   '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             if (task.aiResult != null)
               Padding(

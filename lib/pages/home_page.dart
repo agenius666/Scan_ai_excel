@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../controllers/app_controller.dart';
+import '../services/save_path_service.dart';
 import '../models/scan_task.dart';
+import '../widgets/empty_state_card.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/task_tile.dart';
 import 'history_page.dart';
@@ -12,9 +15,10 @@ import 'scan_review_page.dart';
 import 'task_detail_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, required this.controller});
+  HomePage({super.key, required this.controller});
 
   final AppController controller;
+  final SavePathService _savePathService = SavePathService();
 
   @override
   Widget build(BuildContext context) {
@@ -59,28 +63,46 @@ class HomePage extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => QueuePage(controller: controller)),
-                            ),
-                            icon: const Icon(Icons.playlist_play_outlined),
-                            label: Text(
-                              controller.queueRunning
-                                  ? '核验队列运行中'
-                                  : '核验队列（${controller.queuedCount}）',
+                          child: SizedBox(
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => QueuePage(controller: controller)),
+                              ),
+                              icon: const Icon(Icons.playlist_play_outlined, size: 18),
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  controller.queueRunning
+                                      ? '核验队列运行中'
+                                      : '核验队列（${controller.queuedCount}）',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => HistoryPage(controller: controller),
+                          child: SizedBox(
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => HistoryPage(controller: controller),
+                                ),
+                              ),
+                              icon: const Icon(Icons.history_outlined, size: 18),
+                              label: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  '历史任务',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                ),
                               ),
                             ),
-                            icon: const Icon(Icons.history_outlined),
-                            label: const Text('历史任务'),
                           ),
                         ),
                       ],
@@ -93,8 +115,25 @@ class HomePage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('当前文件', style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 4),
+                            Text(
+                              '这里显示当前已导入的工作簿，以及最近一次导出位置。',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                             const SizedBox(height: 8),
-                            Text(controller.currentExcelName ?? '尚未导入 Excel'),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(controller.currentExcelName ?? '尚未导入 Excel'),
+                                ),
+                                if (controller.session != null)
+                                  TextButton.icon(
+                                    onPressed: controller.busy ? null : controller.clearCurrentSession,
+                                    icon: const Icon(Icons.close_rounded, size: 18),
+                                    label: const Text('清除当前文件'),
+                                  ),
+                              ],
+                            ),
                             if (controller.lastExportPath != null) ...[
                               const SizedBox(height: 8),
                               Text(
@@ -121,11 +160,9 @@ class HomePage extends StatelessWidget {
                     Text('任务列表', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
                     if (controller.tasks.isEmpty)
-                      const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Text('请先导入一个符合规则的 xlsx 文件。'),
-                        ),
+                      const EmptyStateCard(
+                        icon: Icons.upload_file_outlined,
+                        message: '还没有任务。先导入一个符合规则的 xlsx 文件，然后开始逐条扫描和核验。',
                       )
                     else
                       ...controller.tasks.map(
@@ -157,11 +194,35 @@ class HomePage extends StatelessWidget {
 
   Future<void> _handleExport(BuildContext context) async {
     try {
-      final path = await controller.exportExcel();
+      final exportUri = await controller.exportExcel();
       if (!context.mounted) return;
+      final displayPath = controller.lastExportPath ?? exportUri;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('导出成功：$path')),
+        SnackBar(content: Text('导出成功，已保存到：\n$displayPath')),
       );
+      if (exportUri.startsWith('content://')) {
+        final opened = await _savePathService.openDocumentUri(
+          uri: exportUri,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+        if (!context.mounted) return;
+        if (!opened) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已导出，但自动打开失败：系统未能打开该文档 URI')),
+          );
+        }
+        return;
+      }
+      if (!exportUri.startsWith('/')) {
+        return;
+      }
+      final result = await OpenFilex.open(exportUri, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      if (!context.mounted) return;
+      if (result.type != ResultType.done) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导出，但自动打开失败：${result.message}')),
+        );
+      }
     } catch (e) {
       _showError(context, e.toString());
     }
@@ -222,7 +283,7 @@ class HomePage extends StatelessWidget {
 
   void _showError(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: Text('操作失败：$message')),
     );
   }
 }

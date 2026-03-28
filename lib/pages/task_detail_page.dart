@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../controllers/app_controller.dart';
 import '../models/scan_task.dart';
+import '../widgets/empty_state_card.dart';
+import '../widgets/task_header_card.dart';
 import 'scan_review_page.dart';
 
 class TaskDetailPage extends StatelessWidget {
@@ -27,45 +29,25 @@ class TaskDetailPage extends StatelessWidget {
         }
 
         return Scaffold(
-          appBar: AppBar(title: Text('任务查看 - ${task.taskName}')),
+          appBar: AppBar(title: Text('任务详情 - ${task.taskName}')),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('任务信息', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text('文件名：${task.pdfFileNameStem}.pdf'),
-                      Text('页数：${task.imagePaths.length}'),
-                      Text('状态：${task.status.label}'),
-                      if (task.aiResult != null) ...[
-                        const SizedBox(height: 8),
-                        Text('结果：${task.aiResult!.summary}'),
-                      ],
-                      if (task.errorMessage?.isNotEmpty == true) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          task.errorMessage!,
-                          style: TextStyle(color: Theme.of(context).colorScheme.error),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+              TaskHeaderCard(
+                title: task.taskName,
+                statusText: '任务状态：${task.status.label}',
+                fileName: '${task.pdfFileNameStem}.pdf',
+                pageCount: task.imagePaths.length,
+                summary: task.aiResult == null ? null : '结果：${task.aiResult!.summary}',
+                errorText: task.errorMessage,
               ),
               const SizedBox(height: 12),
               Text('扫描图片预览', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               if (task.imagePaths.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('还没有扫描图片。'),
-                  ),
+                const EmptyStateCard(
+                  icon: Icons.photo_library_outlined,
+                  message: '还没有扫描图片。先完成扫描，再回来查看详情。',
                 )
               else
                 Wrap(

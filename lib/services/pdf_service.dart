@@ -5,17 +5,30 @@ import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import 'save_path_service.dart';
 import 'storage_service.dart';
 
+class PdfWriteResult {
+  const PdfWriteResult({required this.uri, required this.displayPath, required this.fileName});
+
+  final String uri;
+  final String displayPath;
+  final String fileName;
+}
+
 class PdfService {
-  PdfService({StorageService? storageService})
-      : _storageService = storageService ?? StorageService();
+  PdfService({StorageService? storageService, SavePathService? savePathService})
+      : _storageService = storageService ?? StorageService(),
+        _savePathService = savePathService ?? SavePathService();
 
   final StorageService _storageService;
+  final SavePathService _savePathService;
 
-  Future<String> generatePdf({
+  Future<PdfWriteResult> generatePdf({
     required List<String> imagePaths,
     required String fileNameStem,
+    String? saveBasePath,
+    String? saveTreeUri,
   }) async {
     final pdf = pw.Document();
 
@@ -28,25 +41,35 @@ class PdfService {
         pw.Page(
           pageFormat: isLandscape ? PdfPageFormat.a4.landscape : PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(20),
-          build: (context) => pw.Center(
-            child: pw.Image(image, fit: pw.BoxFit.contain),
-          ),
+          build: (context) => pw.Center(child: pw.Image(image, fit: pw.BoxFit.contain)),
         ),
       );
     }
 
-    final dir = await _storageService.getDownloadDirectory();
     final stamp = _timestamp();
-    final outputPath = '${dir.path}/${_sanitize(fileNameStem)}_$stamp.pdf';
+    final fileName = '${_sanitize(fileNameStem)}_$stamp.pdf';
+    final bytes = Uint8List.fromList(await pdf.save());
+
+    if (saveTreeUri != null && saveTreeUri.isNotEmpty) {
+      final result = await _savePathService.writeBytesToTree(
+        treeUri: saveTreeUri,
+        fileName: fileName,
+        bytes: bytes,
+        mimeType: 'application/pdf',
+      );
+      return PdfWriteResult(uri: result.uri, displayPath: result.displayPath, fileName: fileName);
+    }
+
+    final dir = await _storageService.getExportDirectory(configuredBasePath: saveBasePath);
+    final outputPath = '${dir.path}/$fileName';
     final outputFile = File(outputPath);
-    final bytes = await pdf.save();
     await outputFile.writeAsBytes(bytes, flush: true);
-    return outputFile.path;
+    return PdfWriteResult(uri: outputFile.path, displayPath: outputFile.path, fileName: fileName);
   }
 
-  Future<String> saveCopyToDownloads(String path) async {
+  Future<String> saveCopyToDownloads(String path, {String? saveBasePath}) async {
     final source = File(path);
-    final dir = await _storageService.getDownloadDirectory();
+    final dir = await _storageService.getExportDirectory(configuredBasePath: saveBasePath);
     final target = File('${dir.path}/${source.uri.pathSegments.last}');
     if (source.path != target.path) {
       await source.copy(target.path);
@@ -54,17 +77,13 @@ class PdfService {
     return target.path;
   }
 
-  Future<Uint8List> loadPdfBytes(String path) {
-    return File(path).readAsBytes();
-  }
+  Future<Uint8List> loadPdfBytes(String path) => File(path).readAsBytes();
 
-  String _sanitize(String input) {
-    return input.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-  }
+  String _sanitize(String input) => input.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
 
   String _timestamp() {
     final now = DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
-    return '${now.year}${two(now.month)}${two(now.day)}${two(now.hour)}${two(now.minute)}${two(now.second)}';
+    return '${two(now.month)}${two(now.day)}${two(now.hour)}${two(now.minute)}${two(now.second)}';
   }
 }

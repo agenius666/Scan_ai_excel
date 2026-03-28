@@ -10,6 +10,8 @@ class SettingsService {
 
   static const _aiPrefix = 'ai_';
   static const _rulePrefix = 'rule_';
+  static const _savePathKey = 'save_export_path';
+  static const _savePathUriKey = 'save_export_tree_uri';
 
   Future<AiConfig> loadAiConfig() async {
     final map = await _storage.readAll();
@@ -49,4 +51,10 @@ class SettingsService {
       await _storage.write(key: '$_rulePrefix${entry.key}', value: entry.value);
     }
   }
+
+  Future<String?> loadSavePath() => _storage.read(key: _savePathKey);
+  Future<void> saveSavePath(String value) => _storage.write(key: _savePathKey, value: value);
+
+  Future<String?> loadSavePathTreeUri() => _storage.read(key: _savePathUriKey);
+  Future<void> saveSavePathTreeUri(String value) => _storage.write(key: _savePathUriKey, value: value);
 }

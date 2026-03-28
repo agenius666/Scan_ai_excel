@@ -1,3 +1,5 @@
+import '../utils/rule_utils.dart';
+
 class ExcelRule {
   const ExcelRule({
     required this.sheetName,
@@ -85,11 +87,7 @@ class ExcelRule {
 
   factory ExcelRule.fromMap(Map<String, String> map) {
     final checkColumnsRaw = map['checkColumns'] ?? defaults.checkColumnsCsv;
-    final checkColumns = checkColumnsRaw
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final checkColumns = parseCheckColumns(checkColumnsRaw);
 
     return ExcelRule(
       sheetName: map['sheetName']?.trim().isNotEmpty == true

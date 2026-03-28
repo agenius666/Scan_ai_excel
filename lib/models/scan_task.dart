@@ -40,6 +40,7 @@ class ScanTask {
     this.status = TaskStatus.pending,
     this.imagePaths = const [],
     this.pdfPath,
+    this.pdfDisplayPath,
     this.aiResult,
     this.errorMessage,
     this.createdAt,
@@ -52,6 +53,7 @@ class ScanTask {
   final TaskStatus status;
   final List<String> imagePaths;
   final String? pdfPath;
+  final String? pdfDisplayPath;
   final AiCheckResult? aiResult;
   final String? errorMessage;
   final DateTime? createdAt;
@@ -67,6 +69,7 @@ class ScanTask {
     TaskStatus? status,
     List<String>? imagePaths,
     String? pdfPath,
+    String? pdfDisplayPath,
     AiCheckResult? aiResult,
     String? errorMessage,
     bool clearPdfPath = false,
@@ -82,6 +85,7 @@ class ScanTask {
       status: status ?? this.status,
       imagePaths: imagePaths ?? this.imagePaths,
       pdfPath: clearPdfPath ? null : (pdfPath ?? this.pdfPath),
+      pdfDisplayPath: clearPdfPath ? null : (pdfDisplayPath ?? this.pdfDisplayPath),
       aiResult: clearAiResult ? null : (aiResult ?? this.aiResult),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       createdAt: createdAt ?? this.createdAt,

@@ -1,4 +1,0 @@
-在 ios/Runner/Info.plist 的 <dict> 中加入：
-
-<key>NSCameraUsageDescription</key>
-<string>需要使用相机来扫描纸质文档。</string>

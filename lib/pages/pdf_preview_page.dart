@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:printing/printing.dart';
 
 import '../controllers/app_controller.dart';
@@ -21,14 +22,15 @@ class PdfPreviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('PDF预览 - $title'),
+        title: Text('PDF 预览 - $title'),
         actions: [
           TextButton.icon(
             onPressed: () async {
               final bytes = await controller.loadPdfBytes(pdfPath);
+              final fileName = p.basename(pdfPath.isEmpty ? '$title.pdf' : pdfPath);
               await Printing.sharePdf(
                 bytes: Uint8List.fromList(bytes),
-                filename: '$title.pdf',
+                filename: fileName,
               );
             },
             icon: const Icon(Icons.share_outlined),

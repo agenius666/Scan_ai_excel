@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../controllers/app_controller.dart';
 import '../models/scan_task.dart';
+import '../widgets/empty_state_card.dart';
+import '../widgets/task_header_card.dart';
 import 'pdf_preview_page.dart';
 
 class ScanReviewPage extends StatelessWidget {
@@ -33,43 +35,21 @@ class ScanReviewPage extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('任务信息', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text('文件名：${task.pdfFileNameStem}.pdf'),
-                      const SizedBox(height: 4),
-                      Text('页数：${task.imagePaths.length}'),
-                      const SizedBox(height: 4),
-                      Text('状态：${task.status.label}'),
-                      if (task.aiResult != null) ...[
-                        const SizedBox(height: 8),
-                        Text('结果摘要：${task.aiResult!.summary}'),
-                      ],
-                      if (task.errorMessage?.isNotEmpty == true) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          task.errorMessage!,
-                          style: TextStyle(color: Theme.of(context).colorScheme.error),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+              TaskHeaderCard(
+                title: task.taskName,
+                statusText: '任务状态：${task.status.label}',
+                fileName: '${task.pdfFileNameStem}.pdf',
+                pageCount: task.imagePaths.length,
+                summary: task.aiResult == null ? null : '结果摘要：${task.aiResult!.summary}',
+                errorText: task.errorMessage,
               ),
               const SizedBox(height: 12),
               Text('扫描图片预览', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               if (task.imagePaths.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('还没有扫描图片。'),
-                  ),
+                const EmptyStateCard(
+                  icon: Icons.photo_library_outlined,
+                  message: '还没有扫描图片。先完成扫描，再回来进行核验或生成 PDF。',
                 )
               else
                 Wrap(
@@ -163,7 +143,7 @@ class ScanReviewPage extends StatelessWidget {
       await controller.scanTask(context, task);
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败：$e')));
     }
   }
 
@@ -183,7 +163,7 @@ class ScanReviewPage extends StatelessWidget {
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败：$e')));
     }
   }
 
@@ -191,10 +171,10 @@ class ScanReviewPage extends StatelessWidget {
     try {
       final path = await controller.generatePdfForTask(task);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF 已生成：$path')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF 已生成，已保存到：\n$path')));
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败：$e')));
     }
   }
 }

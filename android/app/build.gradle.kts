@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.scanexcel"
+    namespace = "com.ylimhs.scanexcel"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.scanexcel"
+        applicationId = "com.ylimhs.scanexcel"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -46,4 +46,5 @@ flutter {
 
 dependencies {
     implementation("org.opencv:opencv:4.10.0")
+    implementation("androidx.documentfile:documentfile:1.0.1")
 }

@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../controllers/app_controller.dart';
 import '../models/ai_check_result.dart';
 import '../models/scan_task.dart';
+import '../widgets/task_header_card.dart';
 
-class ResultPage extends StatelessWidget {
+class ResultPage extends StatefulWidget {
   const ResultPage({
     super.key,
     required this.controller,
@@ -15,11 +16,18 @@ class ResultPage extends StatelessWidget {
   final int taskRowIndex;
 
   @override
+  State<ResultPage> createState() => _ResultPageState();
+}
+
+class _ResultPageState extends State<ResultPage> {
+  bool _rawExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (context, _) {
-        final task = controller.taskByRowIndex(taskRowIndex);
+        final task = widget.controller.taskByRowIndex(widget.taskRowIndex);
         if (task == null) {
           return const Scaffold(
             body: Center(child: Text('任务不存在。')),
@@ -28,7 +36,7 @@ class ResultPage extends StatelessWidget {
 
         final result = task.aiResult;
         return Scaffold(
-          appBar: AppBar(title: Text('任务详情 - ${task.taskName}')),
+          appBar: AppBar(title: Text('核验结果 - ${task.taskName}')),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -64,12 +72,19 @@ class ResultPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '模型原始返回',
-                          style: Theme.of(context).textTheme.titleLarge,
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            '模型原始返回',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          trailing: Icon(_rawExpanded ? Icons.expand_less : Icons.expand_more),
+                          onTap: () => setState(() => _rawExpanded = !_rawExpanded),
                         ),
-                        const SizedBox(height: 8),
-                        SelectableText(result.rawText),
+                        if (_rawExpanded) ...[
+                          const SizedBox(height: 8),
+                          SelectableText(result.rawText),
+                        ],
                       ],
                     ),
                   ),
@@ -109,35 +124,14 @@ class _HeaderCard extends StatelessWidget {
             ? '不通过'
             : '未判定';
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    task.taskName,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ),
-                Chip(
-                  label: Text(statusLabel),
-                  backgroundColor: statusColor.withOpacity(0.12),
-                  side: BorderSide(color: statusColor),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text('状态：${task.status.label}'),
-            Text('PDF：${task.pdfPath ?? '尚未生成'}'),
-            const SizedBox(height: 8),
-            Text(result?.summary ?? task.errorMessage ?? '暂无模型结果'),
-          ],
-        ),
-      ),
+    return TaskHeaderCard(
+      title: task.taskName,
+      statusText: '任务状态：${task.status.label}',
+      statusChipText: statusLabel,
+      statusColor: statusColor,
+      fileName: task.pdfDisplayPath ?? task.pdfPath ?? '尚未生成',
+      summary: result?.summary ?? task.errorMessage ?? '暂无模型结果',
+      errorText: task.errorMessage,
     );
   }
 }

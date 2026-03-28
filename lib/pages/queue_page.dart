@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/app_controller.dart';
 import '../models/scan_task.dart';
+import '../widgets/empty_state_card.dart';
 import 'result_page.dart';
 
 class QueuePage extends StatelessWidget {
@@ -25,13 +26,29 @@ class QueuePage extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(title: const Text('核验队列')),
           body: tasks.isEmpty
-              ? const Center(child: Text('当前没有核验任务'))
+              ? ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: const [
+                    EmptyStateCard(
+                      icon: Icons.playlist_play_outlined,
+                      message: '当前还没有进入核验队列的任务。先扫描并开始核验，任务就会出现在这里。',
+                    ),
+                  ],
+                )
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: tasks.length,
+                  itemCount: tasks.length + 1,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final task = tasks[index];
+                    if (index == 0) {
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text('当前共有 ${tasks.length} 条队列相关任务（含排队中 / 核验中 / 已完成 / 失败）。'),
+                        ),
+                      );
+                    }
+                    final task = tasks[index - 1];
                     return Card(
                       child: ListTile(
                         title: Text(task.taskName),
